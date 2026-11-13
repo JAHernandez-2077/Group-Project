@@ -1,28 +1,162 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Act 8 - Task Organizer</title>
+    <title>Act 8 | Task Manager</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Act 8</h1>
-        <p>My To-Do List</p>
+<div class="app">
 
-        <div class="task-input">
-            <input type="text" id="taskInput"
-                   placeholder="Enter a new task">
-            <button id="addBtn">Add Task</button>
+    <!-- Header -->
+    <header class="hero">
+        <div class="brand">
+            <div class="logo">✓</div>
+            <div>
+                <h1>Act 8</h1>
+                <span>MY TASK MANAGER</span>
+            </div>
         </div>
 
-        <h2>My Tasks</h2>
-        <ul id="taskList"></ul>
-        <p id="taskCount">0 tasks remaining</p>
-    </div>
+        <h2>Stay on top of your tasks.</h2>
+        <p>Plan your day, organize deadlines, and celebrate your progress.</p>
 
-    <script src="script.js"></script>
+        <div class="stats">
+            <div class="stat">
+                <strong id="totalCount">0</strong>
+                <span>Total Tasks</span>
+            </div>
+            <div class="stat">
+                <strong id="pendingCount">0</strong>
+                <span>To Do</span>
+            </div>
+            <div class="stat">
+                <strong id="completedCount">0</strong>
+                <span>Completed</span>
+            </div>
+        </div>
+
+        <div class="progress-info">
+            <span>Overall Progress</span>
+            <span id="progressText">0%</span>
+        </div>
+        <div class="progress-track">
+            <div id="progressBar"></div>
+        </div>
+    </header>
+
+    <!-- Add Task -->
+    <section class="panel">
+        <div class="section-heading">
+            <h2>✏️ Create a Task</h2>
+            <p>Write something down and give it a deadline.</p>
+        </div>
+
+        <form id="taskForm">
+            <label for="taskName">Task Name</label>
+            <input
+                type="text"
+                id="taskName"
+                placeholder="e.g. Finish my homework"
+                maxlength="150"
+                required
+            >
+
+            <label>When is it due?</label>
+
+            <div class="quick-dates">
+                <button type="button" id="todayBtn">Today</button>
+                <button type="button" id="tomorrowBtn">Tomorrow</button>
+                <button type="button" id="weekBtn">Next Week</button>
+            </div>
+
+            <div class="date-time-grid">
+                <div>
+                    <label for="dueDate">Due Date</label>
+                    <input type="date" id="dueDate" required>
+                </div>
+
+                <div>
+                    <label>Due Time</label>
+                    <div class="time-fields">
+                        <select id="hour" aria-label="Hour"></select>
+
+                        <select id="minute" aria-label="Minute">
+                            <option value="00">00</option>
+                            <option value="15">15</option>
+                            <option value="30">30</option>
+                            <option value="45">45</option>
+                        </select>
+
+                        <select id="period" aria-label="AM or PM">
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="time-presets">
+                <span>Quick time:</span>
+                <button type="button" data-time="09:00">Morning</button>
+                <button type="button" data-time="12:00">Noon</button>
+                <button type="button" data-time="18:00">Evening</button>
+            </div>
+
+            <p id="formError" class="form-error" role="alert"></p>
+
+            <button type="submit" class="add-btn">
+                + Add Task
+            </button>
+        </form>
+    </section>
+
+    <!-- Task List -->
+    <section class="panel">
+        <div class="section-heading">
+            <h2>📋 Your Tasks</h2>
+            <p>Manage your upcoming deadlines.</p>
+        </div>
+
+        <div class="toolbar">
+            <input
+                type="search"
+                id="searchInput"
+                placeholder="🔍 Search tasks..."
+                aria-label="Search tasks"
+            >
+
+            <select id="sortSelect" aria-label="Sort tasks">
+                <option value="earliest">Due Soonest</option>
+                <option value="latest">Due Latest</option>
+                <option value="newest">Recently Added</option>
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button class="active" data-filter="all">All Tasks</button>
+            <button data-filter="pending">To Do</button>
+            <button data-filter="completed">Completed</button>
+        </div>
+
+        <div id="taskList" class="task-list"></div>
+
+        <div id="emptyState" class="empty-state">
+            <div>📝</div>
+            <h3>No tasks found</h3>
+            <p>Add your first task to get started!</p>
+        </div>
+    </section>
+
+    <footer>
+        Act 8 · Your personal task organizer
+    </footer>
+
+</div>
+
 </body>
 </html>
