@@ -1,1 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#f6f5f0">
+	<title>Daybook | Task Organizer</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="styles.css">
+	<script src="script.js" defer></script>
+</head>
+<body>
+	<div class="app-shell">
+		<aside class="sidebar" aria-label="Task navigation">
+			<a class="wordmark" href="#" aria-label="ACT 8 MIS 481 home"><span class="brand-mark" aria-hidden="true">A</span> ACT 8 MIS 481</a>
+
+			<div class="sidebar-label">WORKSPACE</div>
+			<nav class="filter-nav" aria-label="Task views">
+				<button class="nav-item is-active" type="button" data-filter="all" aria-pressed="true">
+					<span class="nav-icon icon-inbox" aria-hidden="true"></span><span>All tasks</span><span class="nav-count" id="all-count">0</span>
+				</button>
+				<button class="nav-item" type="button" data-filter="today" aria-pressed="false">
+					<span class="nav-icon icon-sun" aria-hidden="true"></span><span>Today</span><span class="nav-count" id="today-count">0</span>
+				</button>
+				<button class="nav-item" type="button" data-filter="upcoming" aria-pressed="false">
+					<span class="nav-icon icon-calendar" aria-hidden="true"></span><span>Upcoming</span><span class="nav-count" id="upcoming-count">0</span>
+				</button>
+				<button class="nav-item" type="button" data-filter="completed" aria-pressed="false">
+					<span class="nav-icon icon-check" aria-hidden="true"></span><span>Completed</span><span class="nav-count" id="completed-count">0</span>
+				</button>
+			</nav>
+
+			<div class="sidebar-note" aria-live="polite">
+				<span class="note-spark" aria-hidden="true">*</span>
+				<p id="sidebar-note">A little progress adds up.</p>
+				<div class="note-progress"><span id="sidebar-progress"></span></div>
+				<span class="note-caption" id="sidebar-progress-label">Your day is waiting</span>
+			</div>
+			<div class="sidebar-footer"><span class="status-dot"></span> Saved on this device</div>
+		</aside>
+
+		<main class="main-content">
+			<header class="topbar">
+				<div class="date-stamp"><span class="date-dot" aria-hidden="true"></span><span id="current-date"></span></div>
+				<button class="add-button" id="open-task-dialog" type="button"><span aria-hidden="true">+</span> New task</button>
+			</header>
+
+			<section class="page-heading" aria-labelledby="page-title">
+				<div>
+					<p class="eyebrow" id="greeting">A FRESH PAGE</p>
+					<h1 id="page-title">Make room for <em>what matters.</em></h1>
+					<p class="heading-subtitle">Small steps, thoughtfully sorted.</p>
+				</div>
+				<div class="completion-ring" id="completion-ring" role="img" aria-label="0 percent of tasks complete">
+					<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="ring-track" cx="26" cy="26" r="22"></circle><circle class="ring-value" id="ring-value" cx="26" cy="26" r="22"></circle></svg>
+					<span id="completion-percent">0%</span>
+				</div>
+			</section>
+
+			<section class="summary-row" aria-label="Task summary">
+				<div class="summary-item"><span class="summary-number" id="remaining-count">0</span><span class="summary-label">to do</span></div>
+				<span class="summary-divider" aria-hidden="true"></span>
+				<div class="summary-item"><span class="summary-number" id="done-count">0</span><span class="summary-label">done</span></div>
+				<span class="summary-divider" aria-hidden="true"></span>
+				<div class="summary-item"><span class="summary-number" id="overdue-count">0</span><span class="summary-label">overdue</span></div>
+			</section>
+
+			<section class="task-section" aria-labelledby="list-title">
+				<div class="list-heading">
+					<div>
+						<p class="eyebrow">YOUR LIST</p>
+						<h2 id="list-title">All tasks</h2>
+					</div>
+					<label class="search-box">
+						<span class="search-icon" aria-hidden="true"></span>
+						<span class="visually-hidden">Search tasks</span>
+						<input id="search-input" type="search" placeholder="Find a task..." autocomplete="off">
+						<kbd>/</kbd>
+					</label>
+				</div>
+
+				<div class="list-toolbar">
+					<span id="result-label" aria-live="polite">0 tasks</span>
+					<label class="sort-control">Sort by
+						<select id="sort-select" aria-label="Sort tasks">
+							<option value="date">Due date</option>
+							<option value="priority">Priority</option>
+							<option value="created">Recently added</option>
+						</select>
+					</label>
+				</div>
+
+				<div class="task-list" id="task-list" aria-live="polite"></div>
+			</section>
+			<footer class="page-footer"><span class="footer-line"></span><span>One thing at a time.</span><span class="footer-line"></span></footer>
+		</main>
+	</div>
+
+	<dialog class="task-dialog" id="task-dialog" aria-labelledby="dialog-title">
+		<form id="task-form">
+			<div class="dialog-header">
+				<div><p class="eyebrow" id="dialog-eyebrow">ADD TO YOUR LIST</p><h2 id="dialog-title">New task</h2></div>
+				<button class="icon-button close-dialog" type="button" aria-label="Close task form" title="Close">&times;</button>
+			</div>
+			<label class="field-label" for="task-title">Task name <span>*</span></label>
+			<input class="text-field" id="task-title" name="title" type="text" maxlength="120" placeholder="What needs doing?" required>
+			<label class="field-label" for="task-notes">A few details <span class="optional">OPTIONAL</span></label>
+			<textarea class="text-field notes-field" id="task-notes" name="notes" rows="3" maxlength="500" placeholder="Add a note or a next step..."></textarea>
+			<div class="field-grid">
+				<div><label class="field-label" for="task-due">Due date</label><input class="text-field" id="task-due" name="dueDate" type="date"></div>
+				<div><label class="field-label" for="task-priority">Priority</label>
+					<select class="text-field" id="task-priority" name="priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+				</div>
+			</div>
+			<div class="dialog-actions"><button class="cancel-button close-dialog" type="button">Cancel</button><button class="add-button submit-task" id="save-task" type="submit">Add task</button></div>
+		</form>
+	</dialog>
+	<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
 
