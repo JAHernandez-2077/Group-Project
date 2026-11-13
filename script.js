@@ -1,4 +1,4 @@
-const STORAGE_KEY = "daybook.tasks.v1";
+const API_URL = "/.netlify/functions/tasks";
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 const views = {
 	all: { title: "All tasks", heading: "A FRESH PAGE" },
@@ -16,30 +16,43 @@ const taskDueInput = document.querySelector("#task-due");
 const taskPriorityInput = document.querySelector("#task-priority");
 const searchInput = document.querySelector("#search-input");
 const sortSelect = document.querySelector("#sort-select");
-let tasks = loadTasks();
+let tasks = [];
 let activeFilter = "all";
 let editingId = null;
 let toastTimeout;
-
-function loadTasks() {
-	try {
-		const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-		return Array.isArray(saved) ? saved.filter(isValidTask) : [];
-	} catch {
-		return [];
-	}
-}
+let isLoading = true;
+let loadFailed = false;
 
 function isValidTask(task) {
 	return task && typeof task.id === "string" && typeof task.title === "string" &&
 		typeof task.completed === "boolean" && typeof task.createdAt === "number";
 }
 
-function saveTasks() {
+async function requestApi(method, body) {
+	const options = { method, headers: {} };
+	if (body !== undefined) {
+		options.headers["Content-Type"] = "application/json";
+		options.body = JSON.stringify(body);
+	}
+	const response = await fetch(API_URL, options);
+	const data = await response.json().catch(() => ({}));
+	if (!response.ok) throw new Error(data.error || "Task request failed.");
+	return data;
+}
+
+async function loadTasks() {
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-	} catch {
-		showToast("Could not save tasks on this device.");
+		const savedTasks = await requestApi("GET");
+		if (!Array.isArray(savedTasks)) throw new Error("The task database returned invalid data.");
+		tasks = savedTasks.filter(isValidTask);
+		loadFailed = false;
+	} catch (error) {
+		console.error("Unable to load tasks:", error);
+		loadFailed = true;
+		showToast(error.message || "Unable to load tasks from the server.");
+	} finally {
+		isLoading = false;
+		renderTasks();
 	}
 }
 
@@ -55,12 +68,6 @@ function formatDate(dateString) {
 	const date = new Date(`${dateString}T12:00:00`);
 	if (Number.isNaN(date.getTime())) return "No due date";
 	return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
-}
-
-function escapeText(value) {
-	return String(value).replace(/[&<>"']/g, (character) => ({
-		"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-	})[character]);
 }
 
 function getVisibleTasks() {
@@ -184,13 +191,20 @@ function renderTasks() {
 		const mark = document.createElement("span");
 		mark.className = "empty-mark";
 		mark.setAttribute("aria-hidden", "true");
-		mark.textContent = isFiltered ? "..." : "+";
+		mark.textContent = isLoading ? "..." : loadFailed ? "!" : isFiltered ? "..." : "+";
 		const heading = document.createElement("h3");
-		heading.textContent = isFiltered ? "Nothing to see here." : "Start with one small thing.";
+		heading.textContent = isLoading ? "Loading your tasks." : loadFailed ? "Couldn't reach your tasks." : isFiltered ? "Nothing to see here." : "Start with one small thing.";
 		const description = document.createElement("p");
-		description.textContent = isFiltered ? "Try another view or search term." : "Add a task and make it yours.";
+		description.textContent = isLoading ? "Connecting to your task database..." : loadFailed ? "Check the connection and try again." : isFiltered ? "Try another view or search term." : "Add a task and make it yours.";
 		empty.append(mark, heading, description);
-		if (!isFiltered) {
+		if (loadFailed) {
+			const retryButton = document.createElement("button");
+			retryButton.type = "button";
+			retryButton.className = "add-button empty-add";
+			retryButton.textContent = "Try again";
+			retryButton.addEventListener("click", loadTasks);
+			empty.append(retryButton);
+		} else if (!isLoading && !isFiltered) {
 			const addButton = document.createElement("button");
 			addButton.type = "button";
 			addButton.className = "add-button empty-add";
@@ -229,18 +243,27 @@ function openEditDialog(task) {
 	taskTitleInput.focus();
 }
 
-function toggleTask(id) {
-	tasks = tasks.map((task) => task.id === id ? { ...task, completed: !task.completed } : task);
-	saveTasks();
-	renderTasks();
+async function toggleTask(id) {
+	const task = tasks.find((item) => item.id === id);
+	if (!task) return;
+	try {
+		const updatedTask = await requestApi("PATCH", { id, completed: !task.completed });
+		tasks = tasks.map((item) => item.id === id ? updatedTask : item);
+		renderTasks();
+	} catch (error) {
+		showToast(error.message || "Unable to update task.");
+	}
 }
 
-function deleteTask(id) {
-	const task = tasks.find((item) => item.id === id);
-	tasks = tasks.filter((item) => item.id !== id);
-	saveTasks();
-	renderTasks();
-	if (task) showToast("Task deleted");
+async function deleteTask(id) {
+	try {
+		await requestApi("DELETE", { id });
+		tasks = tasks.filter((item) => item.id !== id);
+		renderTasks();
+		showToast("Task deleted");
+	} catch (error) {
+		showToast(error.message || "Unable to delete task.");
+	}
 }
 
 function showToast(message) {
@@ -263,7 +286,7 @@ document.querySelectorAll(".nav-item").forEach((button) => button.addEventListen
 	});
 	renderTasks();
 }));
-taskForm.addEventListener("submit", (event) => {
+taskForm.addEventListener("submit", async (event) => {
 	event.preventDefault();
 	const values = new FormData(taskForm);
 	const title = String(values.get("title") || "").trim();
@@ -274,16 +297,21 @@ taskForm.addEventListener("submit", (event) => {
 		dueDate: String(values.get("dueDate") || ""),
 		priority: String(values.get("priority") || "medium"),
 	};
-	if (editingId) {
-		tasks = tasks.map((task) => task.id === editingId ? { ...task, ...fields } : task);
-		showToast("Changes saved");
-	} else {
-		tasks.push({ id: crypto.randomUUID(), ...fields, completed: false, createdAt: Date.now() });
-		showToast("Task added");
+	try {
+		if (editingId) {
+			const updatedTask = await requestApi("PATCH", { id: editingId, ...fields });
+			tasks = tasks.map((task) => task.id === editingId ? updatedTask : task);
+			showToast("Changes saved");
+		} else {
+			const newTask = await requestApi("POST", fields);
+			tasks.push(newTask);
+			showToast("Task added");
+		}
+		taskDialog.close();
+		renderTasks();
+	} catch (error) {
+		showToast(error.message || "Unable to save task.");
 	}
-	saveTasks();
-	taskDialog.close();
-	renderTasks();
 });
 searchInput.addEventListener("input", renderTasks);
 sortSelect.addEventListener("change", renderTasks);
@@ -295,4 +323,5 @@ document.addEventListener("keydown", (event) => {
 });
 
 renderTasks();
+loadTasks();
 
